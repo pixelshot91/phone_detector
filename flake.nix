@@ -48,12 +48,14 @@
           drv = my-crate;
         };
 
+        # To launch vscode, run "nix develop", then "code ."
         devShells.default = craneLib.devShell {
           # Inherit inputs from checks.
           checks = self.checks.${system};
 
-          # Additional dev-shell environment variables can be set directly
-          # MY_CUSTOM_DEVELOPMENT_VAR = "something else";
+          # vscode "rust-analyzer" extension need this env var otherwise it fails with
+          # 'xxx/Cargo.toml has sysroot errors: can't find standard library sources in yyy'
+          RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
 
           # Extra inputs can be added here; cargo and rustc are provided by default.
           packages = [
