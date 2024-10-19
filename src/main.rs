@@ -3,6 +3,7 @@ use dbus::message::MatchRule;
 use dbus_crossroads::Crossroads;
 use dbus_tokio::connection;
 use futures::future;
+use std::thread;
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -44,8 +45,28 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use futures_util::stream::StreamExt;
     let (incoming_signal, stream) = conn.add_match(mr).await.unwrap().msg_stream();
     println!("stream setup");
-    let stream = stream.for_each(|_| {
+    let stream = stream.for_each(|m| {
         println!("Phone connected!");
+        dbg!(m.get_items());
+        let mut items = m.iter_init();
+
+        let third = items.nth(2).unwrap();
+        let mut sstruct = third.as_iter().unwrap();
+        let phone_mtp_path = sstruct.nth(5).unwrap().as_str().unwrap();
+        dbg!(phone_mtp_path);
+
+        let p = format!(
+            "/run/user/1000/gvfs/{}",
+            phone_mtp_path.replace("://", ":host=")
+        );
+        dbg!(&p);
+        let mtp_dir = std::path::Path::new(&p);
+
+        thread::sleep(Duration::from_millis(500));
+
+        let c = mtp_dir.read_dir().unwrap();
+        let nb_of_files = c.count();
+        dbg!(nb_of_files);
         async {}
     });
     println!("ready");
