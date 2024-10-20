@@ -27,7 +27,9 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // or 'VolumeRemoved'
-    let mr = MatchRule::new_signal("org.gtk.Private.RemoteVolumeMonitor", "VolumeAdded");
+    let phone_connected_rule =
+        MatchRule::new_signal("org.gtk.Private.RemoteVolumeMonitor", "VolumeAdded");
+
     // let incoming_signal = conn.add_match(mr).await?.cb(|_, (source,): (u8,)| {
     //     println!("Hello from {} happened on the bus!", source);
     //     true
@@ -43,7 +45,11 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("before stream setup");
 
     use futures_util::stream::StreamExt;
-    let (incoming_signal, stream) = conn.add_match(mr).await.unwrap().msg_stream();
+    let (incoming_signal, stream) = conn
+        .add_match(phone_connected_rule)
+        .await
+        .unwrap()
+        .msg_stream();
     println!("stream setup");
     let stream = stream.for_each(|m| {
         println!("Phone connected!");
@@ -67,6 +73,22 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let c = mtp_dir.read_dir().unwrap();
         let nb_of_files = c.count();
         dbg!(nb_of_files);
+
+        if nb_of_files == 0 {
+            let open_action_id = "open_id";
+            let notif_handle = notify_rust::Notification::new()
+                .summary("Phone connected")
+                .body("Click on 'Allow' on your phone notification")
+                .icon("nix-snowflake")
+                .action(open_action_id, "Open phone directory")
+                .show()
+                .unwrap();
+
+            // TODO: listen to this signal
+            // let phone_mounted_rule = MatchRule::new_signal("org.gtk.vfs.MountTracker", "Mounted");
+
+            // notif_handle.wait_for_action(invocation_closure);
+        }
         async {}
     });
     println!("ready");
@@ -76,4 +98,25 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     conn.remove_match(incoming_signal.token()).await?;
 
     unreachable!()
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn show_notif() {
+        let open_action_id = "open_id";
+        let notif_handle = notify_rust::Notification::new()
+            .summary("Phone connected")
+            .body("Click on 'Allow' on your phone notification")
+            .icon("nix-snowflake")
+            .action(open_action_id, "Open phone directory")
+            .show()
+            .unwrap();
+        notif_handle.wait_for_action(|action_id| {
+            dbg!(action_id);
+            if action_id == open_action_id {
+                println!("Opening phone dir")
+            }
+        });
+    }
 }
