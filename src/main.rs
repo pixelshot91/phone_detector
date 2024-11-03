@@ -102,6 +102,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod test {
+    #[ignore = "Need a DBus server, which the 'nix build' sandbox does not have"]
     #[test]
     fn show_notif() {
         let open_action_id = "open_id";
